@@ -1,13 +1,11 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
-
+import "./App.css";
 const ColorInfo= (props)=>{
   return (
     <div>
       <div>{props.hsl}</div>
       <div>{props.hsv}</div>
-      <img alt="color image" src={props.image} />
+      <img alt="color" src={props.image} />
     </div>
   );
 }
@@ -40,29 +38,28 @@ class App extends Component {
   }
 
 
-
   componentDidMount(){
-    this.controller = this.asyncLoad();
+    this.controller = this.getAbortController();
+    this.abortSignal = this.controller.signal;
+    this.fetchColor(this.state.hex, this.abortSignal);
   }
   componentDidUpdate(){
-    if (this.state.componentState === "Ready"){
-      this.controller = this.asyncLoad();
-
+    if (this.state.componentState === "Ready" && this.state.colorData.hex.clean !== this.state.hex.toUpperCase() && this.state.hex.length ===6){
+    this.controller = this.getAbortController();
+    this.abortSignal = this.controller.signal;
+    this.fetchColor(this.state.hex, this.abortSignal);
     }
   }
   componentWillUnmount(){
     this.controller.abort();
   }
 
-  controller = {};
-
-  asyncLoad = ()=>{
-    const myController = new AbortController();
-    const mySignal = myController.signal;
-    this.fetchColor(this.state.hex, mySignal);
-
-    return myController;
+  getAbortController = ()=> {
+    const controller = new AbortController();
+    return controller;
   }
+
+  controller = {};
 
   handleChange = (e)=> {
     if (/^[a-fA-F\d]{6}$/.test(e.target.value)) {
@@ -72,7 +69,11 @@ class App extends Component {
   };
 
   render() {
-    let content = null;
+    let content = this.state.colorData.hsl ?   <ColorInfo
+        hsl={this.state.colorData.hsl.value}
+        hsv={this.state.colorData.hsv.value}
+        image={this.state.colorData.image.bare}
+      /> : null;
 
     if (this.state.componentState === "Fetching") {
       content = <div>Loading...</div>;
@@ -92,8 +93,10 @@ class App extends Component {
 
     return (
       <div className="App">
+        <div>
         <input value={this.state.hex} onChange={this.handleChange} />
         {content}
+        </div>
       </div>
     );
   }
