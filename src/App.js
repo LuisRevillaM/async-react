@@ -1,6 +1,6 @@
-import React, { Component } from 'react';
+import React, { Component } from "react";
 import "./App.css";
-const ColorInfo= (props)=>{
+const ColorInfo = props => {
   return (
     <div>
       <div>{props.hsl}</div>
@@ -8,76 +8,100 @@ const ColorInfo= (props)=>{
       <img alt="color" src={props.image} />
     </div>
   );
-}
-
+};
 
 class App extends Component {
-  state={
-    hex: "FFFFFF",
-    componentState: "Ready",
+  state = {
+    color: "FFFFFF",
+    status: "Ready",
     colorData: {}
+  };
+
+  componentDidMount() {
+    this.controller = this.getAbortController();
+    this.abortSignal = this.controller.signal;
+    this.fetchColor(this.state.color, this.abortSignal);
   }
+  componentDidUpdate() {
+    if (
+      this.state.status === "ready" &&
+      this.state.colorData.hex.clean !== this.state.color.toUpperCase() &&
+      this.state.color.length === 6
+    ) {
+      this.controller = this.getAbortController();
+      this.abortSignal = this.controller.signal;
+      this.fetchColor(this.state.color, this.abortSignal);
+    }
+  }
+  componentWillUnmount() {
+    this.controller.abort();
+  }
+
+  stateReducer = (state, action) => {
+    switch (action.type) {
+      case "input":
+        return Object.assign(state, { color: action.payload });
+      case "ready":
+        return Object.assign(state, { status: "ready" });
+      case "fetch":
+        return Object.assign(state, { status: "loading" });
+      case "success":
+        return Object.assign(state, {
+          status: "done",
+          colorData: action.payload
+        });
+      case "failure":
+        return Object.assign(state, { status: "error" });
+      default:
+        return state;
+    }
+  };
+
+  dispatch = action => {
+    const newState = this.stateReducer(this.state, action);
+    this.setState(newState);
+  };
+
+  getAbortController = () => {
+    const controller = new AbortController();
+    return controller;
+  };
+
+  controller = {};
+
+  handleChange = e => {
+    if (/^[a-fA-F\d]{6}$/.test(e.target.value)) {
+      this.dispatch({ type: "ready", payload: e.target.value });
+    }
+    this.dispatch({ type: "input", payload: e.target.value });
+  };
 
   fetchColor = (color, signal) => {
     fetch(`http://www.thecolorapi.com/id?hex=${color}`, { signal })
       .then(response => {
-        this.setState({componentState: "Fetching"});
+        this.dispatch({ type: "fetching" });
         return response.json();
       })
       .then(res => {
-
-        this.setState({
-          colorData: res,
-          componentState: "Success"
-        })
-
+        this.dispatch({ type: "success", payload: res });
       })
       .catch(err => {
-        this.setState({componentState: "Error"})
+        this.dispatch({ type: "failure" });
       });
-  }
-
-
-  componentDidMount(){
-    this.controller = this.getAbortController();
-    this.abortSignal = this.controller.signal;
-    this.fetchColor(this.state.hex, this.abortSignal);
-  }
-  componentDidUpdate(){
-    if (this.state.componentState === "Ready" && this.state.colorData.hex.clean !== this.state.hex.toUpperCase() && this.state.hex.length ===6){
-    this.controller = this.getAbortController();
-    this.abortSignal = this.controller.signal;
-    this.fetchColor(this.state.hex, this.abortSignal);
-    }
-  }
-  componentWillUnmount(){
-    this.controller.abort();
-  }
-
-  getAbortController = ()=> {
-    const controller = new AbortController();
-    return controller;
-  }
-
-  controller = {};
-
-  handleChange = (e)=> {
-    if (/^[a-fA-F\d]{6}$/.test(e.target.value)) {
-      this.setState({componentState:"Ready"});
-    }
-    this.setState({hex: e.target.value});
   };
 
   render() {
-    let content = this.state.colorData.hsl ?   <ColorInfo
+    let content = this.state.colorData.hsl ? (
+      <ColorInfo
         hsl={this.state.colorData.hsl.value}
         hsv={this.state.colorData.hsv.value}
         image={this.state.colorData.image.bare}
-      /> : null;
+      />
+    ) : null;
 
-    if (this.state.componentState === "Fetching") {
+    if (this.state.status === "loading") {
       content = <div>Loading...</div>;
-    } else if (this.state.componentState === "Success") {
+    } else if (this.state.status === "success") {
       content = (
         <ColorInfo
           hsl={this.state.colorData.hsl.value}
@@ -85,17 +109,15 @@ class App extends Component {
           image={this.state.colorData.image.bare}
         />
       );
-    } else if (this.state.componentState === "Error") {
+    } else if (this.state.status === "error") {
       content = <div>Connection failed</div>;
     }
-
-
 
     return (
       <div className="App">
         <div>
-        <input value={this.state.hex} onChange={this.handleChange} />
-        {content}
+          <input value={this.state.color} onChange={this.handleChange} />
+          {content}
         </div>
       </div>
     );
