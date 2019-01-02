@@ -76,18 +76,24 @@ class App extends Component {
     this.dispatch({ type: "input", payload: e.target.value });
   };
 
+  startFetchFlow = function*(color, signal) {
+    const data = yield fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
+      signal
+    }).then(response => {
+      this.dispatch({ type: "fetching" });
+      return response.json();
+    });
+
+    this.dispatch({ type: "success", payload: data });
+  };
+
   fetchColor = (color, signal) => {
-    fetch(`http://www.thecolorapi.com/id?hex=${color}`, { signal })
-      .then(response => {
-        this.dispatch({ type: "fetching" });
-        return response.json();
-      })
-      .then(res => {
-        this.dispatch({ type: "success", payload: res });
-      })
-      .catch(err => {
-        this.dispatch({ type: "failure" });
-      });
+    const followFetchFlow = this.startFetchFlow(color, signal);
+    const futureColor = followFetchFlow.next().value;
+    const doWhenData = value => {
+      followFetchFlow.next(value);
+    };
+    futureColor.then(doWhenData);
   };
 
   render() {
