@@ -79,9 +79,6 @@ class App extends Component {
   startFetchFlow = function*(color, signal) {
     const data = yield fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
       signal
-    }).then(response => {
-      this.dispatch({ type: "fetching" });
-      return response.json();
     });
 
     this.dispatch({ type: "success", payload: data });
@@ -93,7 +90,12 @@ class App extends Component {
     const doWhenData = value => {
       followFetchFlow.next(value);
     };
-    futureColor.then(doWhenData);
+    futureColor
+      .then(response => {
+        this.dispatch({ type: "fetching" });
+        return response.json();
+      })
+      .then(doWhenData);
   };
 
   render() {
