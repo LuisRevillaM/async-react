@@ -58,6 +58,7 @@ class App extends Component {
   };
 
   dispatch = action => {
+    console.log(action.type, action);
     const newState = this.stateReducer(this.state, action);
     this.setState(newState);
   };
@@ -76,18 +77,16 @@ class App extends Component {
     this.dispatch({ type: "input", payload: e.target.value });
   };
 
-  fetchColor = (color, signal) => {
-    fetch(`http://www.thecolorapi.com/id?hex=${color}`, { signal })
-      .then(response => {
-        this.dispatch({ type: "fetching" });
-        return response.json();
-      })
-      .then(res => {
-        this.dispatch({ type: "success", payload: res });
-      })
-      .catch(err => {
-        this.dispatch({ type: "failure" });
-      });
+  fetchColor = async function fetchFlow(color, signal) {
+    this.dispatch({ type: "fetch" });
+    const data = await fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
+      signal
+    });
+
+    const jsonData = await data.json();
+
+    console.log(jsonData);
+    this.dispatch({ type: "success", payload: jsonData });
   };
 
   render() {
